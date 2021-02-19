@@ -19,7 +19,5 @@ public class Agent : MonoBehaviour
         //
         // The new position is equal to newPos = pos + vel * dT
         rbody.MovePosition(rbody.position + velocity * Time.deltaTime);
-
-        // Test to see if git will fucking push so I don't have to shove my head through my laptop screen
     }
 }
