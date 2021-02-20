@@ -17,7 +17,7 @@ public class Agent : MonoBehaviour
     {
         // Moves the rigidbody to the new position
         //
-        // The new position is equal to newPos = pos + vel * dT
+        // The new position is equal to pos + vel * dT
         rbody.MovePosition(rbody.position + velocity * Time.deltaTime);
     }
 }

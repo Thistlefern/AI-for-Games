@@ -28,7 +28,16 @@ public class AISteeringController : MonoBehaviour
         }
     }
 
-    // Add behaviors to this to consider them when calculating steering forces
+    public class FleeSteering : SteeringBehavior
+    {
+        public Transform target;
+        public override Vector3 Steer(AISteeringController controller)
+        {
+            return (controller.transform.position).normalized * controller.maxSpeed - target.position;
+        }
+    }
+
+    // Add behaviors to this to consider them when calculating steering forces (This happens in Start() section)
     protected List<SteeringBehavior> steerings = new List<SteeringBehavior>();
 
     // Returns a Vector3 indicating the steering force to apply to our velocity
@@ -46,18 +55,18 @@ public class AISteeringController : MonoBehaviour
 
     // TODO: These are specific to a certain configuration of behaviors and are only here for testing purposes.
     // In a production scenario, you'd likely inherit from AISteeringController
-    // and have each derived type have its own parameters for initializing
-    // behaviors.
+    // and have each derived type have its own parameters for initializing behaviors.
     public Transform seekTarget;
+    public Transform fleeTarget;
     private void Start()
     {
-        steerings.Add(new SeekSteering { target = seekTarget });
+        steerings.Add(new SeekSteering { target = seekTarget });    // add SeekSteering to the 'steerings' list
+        steerings.Add(new FleeSteering { target = fleeTarget });
     }
     private void Update()
     {
         Vector3 steeringForce = CalculateSteeringForce();
-        // Add steering force to velocity -- clamp its magnitude w/ respect
-        // to maxSpeed
+        // Add steering force to velocity -- clamp its magnitude w/ respect to maxSpeed
         agent.velocity = Vector3.ClampMagnitude(agent.velocity + steeringForce,
                                                 maxSpeed);
         agent.UpdateMovement();
