@@ -7,7 +7,8 @@ public class Agent : MonoBehaviour
     // Refers to the rigidbody that will be driven
     // (assign this in the editor)
     [SerializeField]
-    protected Rigidbody rbody;
+    public Rigidbody rbody;
+    public Collider myCollider;
     
     // Defines the change in the player's position over time
     public virtual Vector3 velocity { get; set; }

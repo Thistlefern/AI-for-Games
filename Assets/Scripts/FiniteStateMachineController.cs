@@ -4,13 +4,15 @@ using UnityEngine;
 
 public class FiniteStateMachineController : MonoBehaviour
 {
-    public Agent agent;
+    public Agent fsmAgent;
 
     public Vector3[] patrolWaypoints;
     public int currentPatrolIndex;
 
     public Transform intruderTransform;
 
+    public bool intruderDetected = false;
+    public bool inAttackRange = false;
 
     public enum States
     {
@@ -20,9 +22,31 @@ public class FiniteStateMachineController : MonoBehaviour
     [SerializeField]
     private States currentState;
 
+    private void OnDrawGizmos()
+    {
+        Gizmos.DrawWireSphere(transform.position, 4.0f);
+        Gizmos.DrawWireSphere(transform.position, 8.0f);
+    }
+
     private void Update()
     {
-        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, 15.0f);
+        Collider[] attackRadius = Physics.OverlapSphere(transform.position, 4.0f);
+        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, 8.0f);
+
+        foreach (var hitCollider in detectionRadius)
+        {
+            if(hitCollider.name != name)
+            {
+                intruderDetected = true;
+            }
+        }
+        foreach (var hitCollider in attackRadius)
+        {
+            if (hitCollider.name != name)
+            {
+                inAttackRange = true;
+            }
+        }
 
         switch (currentState)
         {
@@ -44,7 +68,7 @@ public class FiniteStateMachineController : MonoBehaviour
     {
         // TODO add patrol movement
 
-        if (Mathf.Abs(intruderTransform.position.x - transform.position.x) <= 8 || Mathf.Abs(intruderTransform.position.z - transform.position.z) <= 8)
+        if (intruderDetected)
         {
             ChangeState(States.Seek);
         }
@@ -53,11 +77,11 @@ public class FiniteStateMachineController : MonoBehaviour
     {
         // TODO add seek movement
 
-        if (Mathf.Abs(intruderTransform.position.x - transform.position.x) <= 4 || Mathf.Abs(intruderTransform.position.z - transform.position.z) <= 4)
+        if (inAttackRange)
         {
             ChangeState(States.Attack);
         }
-        else if(Mathf.Abs(intruderTransform.position.x - transform.position.x) >= 12 || Mathf.Abs(intruderTransform.position.z - transform.position.z) >= 12)
+        else if(!intruderDetected)
         {
             ChangeState(States.Patrol);
         }
@@ -66,7 +90,7 @@ public class FiniteStateMachineController : MonoBehaviour
     {
         // TODO add attack movement
 
-        if (Mathf.Abs(intruderTransform.position.x - transform.position.x) > 8 || Mathf.Abs(intruderTransform.position.z - transform.position.z) > 8)
+        if (!inAttackRange)
         {
             ChangeState(States.Seek);
         }
