@@ -38,14 +38,14 @@ public class AISteeringController : MonoBehaviour
         }
     }
 
-    public class WanderSteering : SteeringBehavior
-    {
-        public Vector3 target;
-        public override Vector3 Steer(AISteeringController controller)
-        {
-            return (controller.transform.position).normalized * controller.maxSpeed - target.normalized;
-        }
-    }
+    //public class WanderSteering : SteeringBehavior
+    //{
+    //    public Vector3 target;
+    //    public override Vector3 Steer(AISteeringController controller)
+    //    {
+    //        return (controller.transform.position).normalized * controller.maxSpeed - target.normalized;
+    //    }
+    //}
 
 
 
@@ -93,8 +93,6 @@ public class AISteeringController : MonoBehaviour
         agent.velocity = Vector3.ClampMagnitude(agent.velocity + steeringForce,
                                                 maxSpeed);
         agent.UpdateMovement();
-
-        Debug.Log(seekTarget.transform);
     }
 }
 
