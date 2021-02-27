@@ -5,6 +5,7 @@ using UnityEngine;
 public class FiniteStateMachineController : MonoBehaviour
 {
     public Agent fsmAgent;
+    public float speed = 3.0f;
 
     public Vector3[] patrolWaypoints;
     public int currentPatrolIndex;
@@ -33,6 +34,7 @@ public class FiniteStateMachineController : MonoBehaviour
         Collider[] attackRadius = Physics.OverlapSphere(transform.position, 4.0f);
         Collider[] detectionRadius = Physics.OverlapSphere(transform.position, 8.0f);
 
+
         foreach (var hitCollider in detectionRadius)
         {
             if(hitCollider.name != name)
@@ -40,6 +42,7 @@ public class FiniteStateMachineController : MonoBehaviour
                 intruderDetected = true;
             }
         }
+
         foreach (var hitCollider in attackRadius)
         {
             if (hitCollider.name != name)
@@ -63,6 +66,9 @@ public class FiniteStateMachineController : MonoBehaviour
                 Debug.LogError("Invalid state!");
                 break;
         }
+
+        intruderDetected = false;
+        inAttackRange = false;
     }
     void Patrol()   // what happens while patrolling
     {
@@ -88,7 +94,10 @@ public class FiniteStateMachineController : MonoBehaviour
     }
     void Attack()   // what happens while attacking
     {
-        // TODO add attack movement
+        Vector3 offset = intruderTransform.position - transform.position;
+
+        fsmAgent.velocity = offset.normalized * speed;
+        fsmAgent.UpdateMovement();
 
         if (!inAttackRange)
         {
