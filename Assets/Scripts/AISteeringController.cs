@@ -10,6 +10,9 @@ public class AISteeringController : MonoBehaviour
     [Header("Steering Settings")]
     public float maxSpeed = 3.0f;
     public float maxForce = 5.0f;
+    static float timeToMove = 3.0f;
+    static float timer = timeToMove;
+
 
     public class SteeringBehavior   // a base from which to build other behaviors
     {
@@ -17,7 +20,6 @@ public class AISteeringController : MonoBehaviour
         {
             return Vector3.zero;    // defaults to zero, because if an entity isn't affected by a behavior, they should not move
         }
-
     }
 
     public class SeekSteering : SteeringBehavior
@@ -38,14 +40,28 @@ public class AISteeringController : MonoBehaviour
         }
     }
 
-    //public class WanderSteering : SteeringBehavior
-    //{
-    //    public Vector3 target;
-    //    public override Vector3 Steer(AISteeringController controller)
-    //    {
-    //        return (controller.transform.position).normalized * controller.maxSpeed - target.normalized;
-    //    }
-    //}
+    public class WanderSteering : SteeringBehavior
+    {
+        public Transform target;
+
+        public override Vector3 Steer(AISteeringController controller)
+        {
+            if (timer >= timeToMove)
+            {
+                var randomTarget = (Random.insideUnitSphere * 100) + target.position;
+                randomTarget.y = 0;
+
+                Debug.Log(randomTarget);
+                timer = 0.0f;
+
+                return randomTarget;
+            }
+            else
+            {
+                return Vector3.zero;
+            }
+        }
+    }
 
 
 
@@ -68,23 +84,22 @@ public class AISteeringController : MonoBehaviour
     // TODO: These are specific to a certain configuration of behaviors and are only here for testing purposes.
     // In a production scenario, you'd likely inherit from AISteeringController
     // and have each derived type have its own parameters for initializing behaviors.
+    [SerializeField]
+    public Transform wanderTarget;
     public Transform seekTarget;
-    public Transform fleeTarget;
-    // Vector3 wanderTarget;
+    //public Transform fleeTarget;
     
     private void Start()
     {
         // add the different steering types to the 'steerings' list
         steerings.Add(new SeekSteering { target = seekTarget });
         // steerings.Add(new FleeSteering { target = fleeTarget });
-        // steerings.Add(new WanderSteering { target = wanderTarget});
+        steerings.Add(new WanderSteering { target = wanderTarget });
 
     }
     private void Update()
     {
-        Vector3 lastLocation = seekTarget.position;
-
-
+        timer += Time.deltaTime;
         //wanderTarget = new Vector3(Random.insideUnitSphere.x, 0.0f, Random.insideUnitSphere.z);
         //Debug.Log(wanderTarget);
 
