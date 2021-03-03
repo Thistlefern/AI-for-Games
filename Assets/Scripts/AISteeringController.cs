@@ -51,7 +51,6 @@ public class AISteeringController : MonoBehaviour
                 var randomTarget = (Random.insideUnitSphere * 100) + target.position;
                 randomTarget.y = 0;
 
-                Debug.Log(randomTarget);
                 timer = 0.0f;
 
                 return randomTarget;

@@ -20,6 +20,8 @@ public class FiniteStateMachineController : MonoBehaviour
     public bool intruderDetected = false;
     public bool inAttackRange = false;
 
+    static Vector3 randomTarget;
+
     public enum States
     {
         Patrol, Seek, Attack
@@ -110,7 +112,20 @@ public class FiniteStateMachineController : MonoBehaviour
     }
     void Seek()     // what happens while seeking
     {
-        // TODO add seek movement
+        waitTimer += Time.deltaTime;
+
+        if (waitTimer >= waitInterval)
+        {
+            randomTarget = (Random.insideUnitSphere * 10) + intruderTransform.position;
+            waitTimer = 0.0f;
+        }
+        randomTarget.y = 0;
+
+        Vector3 offset = randomTarget - transform.position;
+
+        fsmAgent.velocity = offset.normalized * speed;
+        fsmAgent.UpdateMovement();
+
 
         if (inAttackRange)
         {
