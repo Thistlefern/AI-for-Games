@@ -20,6 +20,10 @@ public class FiniteStateMachineController : MonoBehaviour
     public bool intruderDetected = false;
     public bool inAttackRange = false;
 
+    public float perceptionDistance = 8.0f;
+    public float attackRange = 4.0f;
+    public float seekDistance = 10.0f;
+
     static Vector3 randomTarget;
 
     public enum States
@@ -32,14 +36,14 @@ public class FiniteStateMachineController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.DrawWireSphere(transform.position, 4.0f);
-        Gizmos.DrawWireSphere(transform.position, 8.0f);
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(transform.position, perceptionDistance);
     }
 
     private void Update()
     {
-        Collider[] attackRadius = Physics.OverlapSphere(transform.position, 4.0f);
-        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, 8.0f);
+        Collider[] attackRadius = Physics.OverlapSphere(transform.position, attackRange);
+        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perceptionDistance);
 
 
         foreach (var hitCollider in detectionRadius)
@@ -116,7 +120,7 @@ public class FiniteStateMachineController : MonoBehaviour
 
         if (waitTimer >= waitInterval)
         {
-            randomTarget = (Random.insideUnitSphere * 10) + intruderTransform.position;
+            randomTarget = (Random.insideUnitSphere * seekDistance) + intruderTransform.position;
             waitTimer = 0.0f;
         }
         randomTarget.y = 0;
