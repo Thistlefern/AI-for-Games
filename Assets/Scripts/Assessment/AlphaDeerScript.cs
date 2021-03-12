@@ -5,30 +5,29 @@ using UnityEngine;
 public class AlphaDeerScript : MonoBehaviour
 {
     public Agent alphaAgent;
-    public float speed = 10.0f;
-
-    public Transform[] waypoints;
-    private int currentWaypointID = 0;
+    public float speed = 8.0f;
+    public float health = 40.0f;
+    public float fatigue = 0.0f;
+    public float thirst = 0.0f;
+    public float hunger = 40.0f;
+    public float perception = 20.0f;
 
     public float reachedThreshold = 0.5f;
 
-    public float waitInterval = 2.0f;      // amount of time to wait at each patrol waypoint in seconds
-    public float waitTimer = 2.0f;
+    public float timer = 0.0f;
 
-    public Transform intruderTransform;
+    public Transform predatorTransform;
+    public Transform lake;
 
-    public bool intruderDetected = false;
-    public bool inAttackRange = false;
+    public bool predatorDetected = false;
 
-    public float perceptionDistance = 8.0f;
-    public float attackRange = 4.0f;
     public float seekDistance = 10.0f;
 
     static Vector3 randomTarget;
 
     public enum States
     {
-        Patrol, Seek, Attack
+        Flee, Sleep, Search, Drink, Eat, Wander
     }
 
     [SerializeField]
@@ -36,176 +35,287 @@ public class AlphaDeerScript : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.DrawWireSphere(transform.position, attackRange);
-        Gizmos.DrawWireSphere(transform.position, perceptionDistance);
+        Gizmos.DrawWireSphere(transform.position, perception);
     }
 
     private void Update()
     {
-        Collider[] attackRadius = Physics.OverlapSphere(transform.position, attackRange);
-        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perceptionDistance);
-
-
-        foreach (var hitCollider in detectionRadius)
+        timer++;
+        if (timer == 2.0f)
         {
-            if (hitCollider.name != name)
-            {
-                intruderDetected = true;
-            }
+            fatigue += 0.5f;
+            hunger++;
+            thirst++;
+            timer = 0.0f;
         }
 
-        foreach (var hitCollider in attackRadius)
-        {
-            if (hitCollider.name != name)
-            {
-                inAttackRange = true;
-            }
-        }
+        Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perception);
+
+        // TODO fix so other deer don't trigger predator check
+        //foreach (var hitCollider in detectionRadius)
+        //{
+        //    if (hitCollider.name != name)
+        //    {
+        //        predatorDetected = true;
+        //    }
+        //}
 
         switch (currentState)
         {
-            case States.Patrol: // when currentstate is Patrol...
-                Patrol();       // ...run the Patrol function
+            case States.Flee:
+                Flee();
                 break;
-            case States.Seek:   // when currentstate is Seek...
-                Seek();         // ...run the Seek function
+            case States.Sleep:
+                Sleep();
                 break;
-            case States.Attack: // when currentstate is Attack...
-                Attack();       // ...run the Attack function
+            case States.Search:
+                Search();
+                break;
+            case States.Drink:
+                Drink();
+                break;
+            case States.Eat:
+                Eat();
                 break;
             default:
-                Debug.LogError("Invalid state!");
+                Wander();
                 break;
         }
 
-        intruderDetected = false;
-        inAttackRange = false;
+        predatorDetected = false;
     }
-    void Patrol()   // what happens while patrolling
+    
+    void Flee()
     {
-        waitTimer += Time.deltaTime;
+        // TODO flee
 
-        if (waitTimer < waitInterval)
+        // TODO if predator transform is not in perception range, wander
+    }
+    void Sleep()
+    {
+        if (timer == 2.0f)
         {
-            return;
+            fatigue -= 2.5f;
         }
-        else
+
+        if (fatigue <= 50)
         {
-
-            Vector3 offset = waypoints[currentWaypointID].position - transform.position;
-
-            alphaAgent.velocity = offset.normalized * speed;
-
-            alphaAgent.UpdateMovement();
-
-            if (offset.magnitude <= reachedThreshold)    // checks if patrol has reached waypoint
+            if (thirst >= 80)
             {
-                waitTimer = 0;              // set timer to zero to begin counting time at waypoint
-                currentWaypointID++;        // if waypoint was reached, target waypoint becomes next waypoint
-                if (currentWaypointID >= waypoints.Length)   // loop back to the beginning after reaching the last waypoint
-                {
-                    currentWaypointID = 0;
-                }
+                ChangeState(States.Search);
+            }
+            else if (hunger >= 80)
+            {
+                ChangeState(States.Search);
             }
         }
-
-        if (intruderDetected)
+        else if (fatigue <= 0)
         {
-            ChangeState(States.Seek);
+            fatigue = 0;
+            ChangeState(States.Wander);
         }
     }
-    void Seek()     // what happens while seeking
+    void Search()
     {
-        waitTimer += Time.deltaTime;
-
-        if (waitTimer >= waitInterval)
+        // TODO search for water
+        // TODO implement stopping search when water is reached
+        // TODO implement flee if predator gets too close
+    }
+    void Drink()
+    {
+        if (timer == 2.0f)
         {
-            randomTarget = (Random.insideUnitSphere * seekDistance) + intruderTransform.position;
-            waitTimer = 0.0f;
+            thirst -= 6.0f;
         }
-        randomTarget.y = 0;
 
-        Vector3 offset = randomTarget - transform.position;
-
-        alphaAgent.velocity = offset.normalized * speed;
-        alphaAgent.UpdateMovement();
-
-
-        if (inAttackRange)
+        // TODO implement flee if predator gets too close
+        // else
+        if (thirst <= 0)
         {
-            ChangeState(States.Attack);
-        }
-        else if (!intruderDetected)
-        {
-            ChangeState(States.Patrol);
+            ChangeState(States.Wander);
         }
     }
-    void Attack()   // what happens while attacking
+    void Eat()
     {
-        Vector3 offset = intruderTransform.position - transform.position;
-
-        alphaAgent.velocity = offset.normalized * speed;
-        alphaAgent.UpdateMovement();
-
-        if (!inAttackRange)
+        if (timer == 2.0f)
         {
-            ChangeState(States.Seek);
+            hunger -= 6.0f;
+        }
+
+        // TODO implement flee if predator gets too close
+        // else
+        if (hunger <= 40)
+        {
+            if (thirst >= 80)
+            {
+                ChangeState(States.Search);
+            }
+        }
+        else if (hunger <= 0)
+        {
+            ChangeState(States.Wander);
+        }
+    }
+    void Wander()
+    {
+        // TODO wander
+        // TODO implement flee if predator gets too close
+        // else
+        if (fatigue >= 50)
+        {
+            ChangeState(States.Sleep);
+        }
+        else if (thirst >= 50)
+        {
+            ChangeState(States.Search);
+        }
+        else if (hunger >= 50)
+        {
+            ChangeState(States.Search);
         }
     }
 
     void ChangeState(States newState)
     {
-        if (newState == States.Patrol)
+        switch (currentState)
         {
-            OnSeekExit();
-            OnPatrolEnter();
-        }
-        else if (newState == States.Attack)
-        {
-            OnSeekExit();
-            OnAttackEnter();
-        }
-        else if (newState == States.Seek)
-        {
-            if (currentState == States.Patrol)
-            {
-                OnPatrolExit();
-            }
-            else if (currentState == States.Attack)
-            {
-                OnAttackExit();
-            }
-            OnSeekEnter();
+            case States.Flee:
+                OnFleeExit();
+                OnWanderEnter();
+                break;
+            case States.Sleep:
+                OnSleepExit();
+                if(newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Search:
+                OnSearchExit();
+                if(newState == States.Flee)
+                {
+                    OnFleeEnter();
+                }
+                else
+                {
+                    OnDrinkEnter();
+                }
+                break;
+            case States.Drink:
+                OnDrinkExit();
+                if (newState == States.Flee)
+                {
+                    OnFleeEnter();
+                }
+                else if (newState == States.Eat)
+                {
+                    OnEatEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Eat:
+                OnEatExit();
+                if (newState == States.Flee)
+                {
+                    OnFleeEnter();
+                }
+                else if(newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Wander:
+                OnWanderExit();
+                if (newState == States.Flee)
+                {
+                    OnFleeEnter();
+                }
+                else if (newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnEatEnter();
+                }
+                break;
         }
     }
 
-    void OnPatrolEnter()
+    // Flee
+    void OnFleeEnter()
     {
-        Debug.Log("I guess it was nothing...");
-        currentState = States.Patrol;
+        // anything that happens when flee state starts
+        currentState = States.Flee;
     }
-    void OnPatrolExit()
+    void OnFleeExit()
     {
-        Debug.Log("What was that?");
-    }
-
-    void OnSeekEnter()
-    {
-        Debug.Log("Where are you?");
-        currentState = States.Seek;
-    }
-    void OnSeekExit()
-    {
-        // seek concludes, didn't add a Debug.Log because there are two reasons why a seek would end and no quote made sense for both
+        // anything that happens when flee state ends
     }
 
-    void OnAttackEnter()
+    // Sleep
+    void OnSleepEnter()
     {
-        Debug.Log("There you are!");
-        currentState = States.Attack;
+        // anything that happens when sleep state starts
+        currentState = States.Sleep;
     }
-    void OnAttackExit()
+    void OnSleepExit()
     {
-        Debug.Log("Get back here!");
+        // anything that happens when sleep state ends
+    }
+
+    // Search
+    void OnSearchEnter()
+    {
+        // anything that happens when search state starts
+        currentState = States.Search;
+    }
+    void OnSearchExit()
+    {
+        // anything that happens when search state ends
+    }
+
+    // Drink
+    void OnDrinkEnter()
+    {
+        // anything that happens when drink state starts
+        currentState = States.Drink;
+    }
+    void OnDrinkExit()
+    {
+        // anything that happens when drink state ends
+    }
+
+    // Eat
+    void OnEatEnter()
+    {
+        // anything that happens when eat state starts
+        currentState = States.Eat;
+    }
+    void OnEatExit()
+    {
+        // anything that happens when eat state ends
+    }
+
+    // Wander
+    void OnWanderEnter()
+    {
+        // anything that happens when wander state starts
+        currentState = States.Wander;
+    }
+    void OnWanderExit()
+    {
+        // anything that happens when wander state ends
     }
 }

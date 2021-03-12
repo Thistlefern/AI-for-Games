@@ -23,7 +23,7 @@ public class CougarScript : MonoBehaviour
     public Transform intruderTransform;
     public Transform lake;
 
-    public bool intruderDetected = false;
+    public bool preyDetected = false;
     public bool inAttackRange = false;
 
     public float attackRange = 4.0f;
@@ -63,7 +63,7 @@ public class CougarScript : MonoBehaviour
         {
             if (hitCollider.name != name)
             {
-                intruderDetected = true;
+                preyDetected = true;
             }
         }
 
@@ -100,14 +100,14 @@ public class CougarScript : MonoBehaviour
                 break;
         }
 
-        intruderDetected = false;
+        preyDetected = false;
         inAttackRange = false;
     }
     void Sleep()
     {
         if(timer == 2.0f)
         {
-            fatigue -= 1.5f;
+            fatigue -= 2.5f;
         }
         
         if(fatigue <= 50)
@@ -265,57 +265,159 @@ public class CougarScript : MonoBehaviour
 
     void ChangeState(States newState)
     {
-        if (newState == States.Patrol)
+        switch (currentState)
         {
-            OnSeekExit();
-            OnPatrolEnter();
-        }
-        else if (newState == States.Attack)
-        {
-            OnSeekExit();
-            OnAttackEnter();
-        }
-        else if (newState == States.Seek)
-        {
-            if (currentState == States.Patrol)
-            {
-                OnPatrolExit();
-            }
-            else if (currentState == States.Attack)
-            {
-                OnAttackExit();
-            }
-            OnSeekEnter();
+            case States.Sleep:
+                OnSleepExit();
+                if(newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Search:
+                OnSearchExit();
+                if(newState == States.Eat)
+                {
+                    OnEatEnter();
+                }
+                else if(newState == States.Sneak)
+                {
+                    OnSneakEnter();
+                }
+                else
+                {
+                    OnDrinkEnter();
+                }
+                break;
+            case States.Drink:
+                OnDrinkExit();
+                if(newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Eat:
+                OnEatExit();
+                if (newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
+                break;
+            case States.Sneak:
+                OnSneakExit();
+                OnChaseEnter();
+                break;
+            case States.Chase:
+                OnChaseExit();
+                if (newState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnEatEnter();
+                }
+                break;
+            case States.Wander:
+                OnWanderExit();
+                if(currentState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnSleepEnter();
+                }
+                break;
         }
     }
 
-    void OnPatrolEnter()
+    // Sleep
+    void OnSleepEnter()
     {
-        Debug.Log("I guess it was nothing...");
-        currentState = States.Patrol;
+        // anything that happens when sleep state starts
+        currentState = States.Sleep;
     }
-    void OnPatrolExit()
+    void OnSleepExit()
     {
-        Debug.Log("What was that?");
-    }
-
-    void OnSeekEnter()
-    {
-        Debug.Log("Where are you?");
-        currentState = States.Seek;
-    }
-    void OnSeekExit()
-    {
-        // seek concludes, didn't add a Debug.Log because there are two reasons why a seek would end and no quote made sense for both
+        // anything that happens when sleep state ends
     }
 
-    void OnAttackEnter()
+    // Search
+    void OnSearchEnter()
     {
-        Debug.Log("There you are!");
-        currentState = States.Attack;
+        // anything that happens when search state starts
+        currentState = States.Search;
     }
-    void OnAttackExit()
+    void OnSearchExit()
     {
-        Debug.Log("Get back here!");
+        // anything that happens when search state ends
+    }
+
+    // Drink
+    void OnDrinkEnter()
+    {
+        // anything that happens when drink state starts
+        currentState = States.Drink;
+    }
+    void OnDrinkExit()
+    {
+        // anything that happens when drink state ends
+    }
+
+    // Eat
+    void OnEatEnter()
+    {
+        // anything that happens when eat state starts
+        currentState = States.Eat;
+    }
+    void OnEatExit()
+    {
+        // anything that happens when eat state ends
+    }
+
+    // Sneak
+    void OnSneakEnter()
+    {
+        // anything that happens when sneak state starts
+        currentState = States.Sneak;
+    }
+    void OnSneakExit()
+    {
+        // anything that happens when sneak state ends
+    }
+
+    // Chase
+    void OnChaseEnter()
+    {
+        // anything that happens when chase state starts
+        currentState = States.Chase;
+    }
+    void OnChaseExit()
+    {
+        // anything that happens when chase state ends
+    }
+
+    // Wander
+    void OnWanderEnter()
+    {
+        // anything that happens when wander state starts
+        currentState = States.Wander;
+    }
+    void OnWanderExit()
+    {
+        // anything that happens when wander state ends
     }
 }
