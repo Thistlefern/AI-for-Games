@@ -17,13 +17,73 @@ public class DecisionTreeController : MonoBehaviour
     public IDecision decisionTreeRoot;
 
     // set up your tree here, assigning additional decisions to the left and right of the tree
+
+    public class EvaluateDecision : IDecision
+    {
+        public bool branch = false;
+
+        // default constructor
+        public EvaluateDecision() { }
+
+        // parameterized constructor allows you to define branch on construction
+        public EvaluateDecision(bool val)
+        {
+            branch = val;
+        }
+
+        // evaluate the decision
+        public IDecision MakeDecision()
+        {
+            Debug.Log(branch ? "Yes" : "No");
+            return null;
+        }
+    }
+    public class RangeCheckDecision : IDecision
+    {
+        public Transform myTransform;
+        public Transform target;
+
+        public IDecision isInRange;
+        public IDecision isNotInRange;
+
+        public float range = 1.0f;
+
+        public IDecision MakeDecision()
+        {
+            bool rangeTest = (myTransform.position - target.position).magnitude <= range;
+
+            if (rangeTest)
+            {
+                return isInRange;
+            }
+            else
+            {
+                return isNotInRange;
+            }
+        }
+    }
+
+    public class FleeDecision : IDecision
+    {
+        public IDecision flee;
+        public IDecision MakeDecision()
+        {
+            flee.MakeDecision();
+            return flee;
+        }
+    }
+
     void Start()
     {
-        decisionTreeRoot = new PrintDecision(true);
+        decisionTreeRoot = new EvaluateDecision(true);
     }
 
     void Update()
     {
-        decisionTreeRoot.MakeDecision();
+        IDecision currentDecision = decisionTreeRoot;
+        while(currentDecision != null)
+        {
+            decisionTreeRoot.MakeDecision();
+        }
     }
 }
