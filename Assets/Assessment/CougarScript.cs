@@ -2,32 +2,36 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AlphaDeerScript : MonoBehaviour
+public class CougarScript : MonoBehaviour
 {
-    public Agent alphaAgent;
+    public Agent cougarAgent;
     public float speed = 8.0f;
     public float health = 40.0f;
     public float fatigue = 0.0f;
     public float thirst = 0.0f;
     public float hunger = 40.0f;
     public float perception = 20.0f;
+    public float foodLeft = 0.0f;
+    // TODO maybe add cache of where food is stored?
 
     public float reachedThreshold = 0.5f;
 
     public float timer = 0.0f;
 
-    public Transform predatorTransform;
+    public Transform intruderTransform;
     public Transform lake;
 
-    public bool predatorDetected = false;
+    public bool preyDetected = false;
+    public bool inAttackRange = false;
 
+    public float attackRange = 4.0f;
     public float seekDistance = 10.0f;
 
     static Vector3 randomTarget;
 
     public enum States
     {
-        Flee, Sleep, Search, Drink, Eat, Wander
+        Wander, Sleep, Search, Drink, Eat, Sneak, Chase
     }
 
     [SerializeField]
@@ -35,13 +39,14 @@ public class AlphaDeerScript : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        Gizmos.DrawWireSphere(transform.position, attackRange);
         Gizmos.DrawWireSphere(transform.position, perception);
     }
 
     private void Update()
     {
-        timer++;
-        if (timer == 2.0f)
+        timer += Time.deltaTime;
+        if(timer >= 2.0f)
         {
             fatigue += 0.5f;
             hunger++;
@@ -49,22 +54,27 @@ public class AlphaDeerScript : MonoBehaviour
             timer = 0.0f;
         }
 
+        Collider[] attackRadius = Physics.OverlapSphere(transform.position, attackRange);
         Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perception);
 
-        // TODO fix so other deer don't trigger predator check
-        //foreach (var hitCollider in detectionRadius)
-        //{
-        //    if (hitCollider.name != name)
-        //    {
-        //        predatorDetected = true;
-        //    }
-        //}
+        foreach (var hitCollider in detectionRadius)
+        {
+            if (hitCollider.name != name)
+            {
+                preyDetected = true;
+            }
+        }
+
+        foreach (var hitCollider in attackRadius)
+        {
+            if (hitCollider.name != name)
+            {
+                inAttackRange = true;
+            }
+        }
 
         switch (currentState)
         {
-            case States.Flee:
-                Flee();
-                break;
             case States.Sleep:
                 Sleep();
                 break;
@@ -77,39 +87,39 @@ public class AlphaDeerScript : MonoBehaviour
             case States.Eat:
                 Eat();
                 break;
+            case States.Sneak:
+                Sneak();
+                break;
+            case States.Chase:
+                Chase();
+                break;
             default:
                 Wander();
                 break;
         }
 
-        predatorDetected = false;
-    }
-    
-    void Flee()
-    {
-        // TODO flee
-
-        // TODO if predator transform is not in perception range, wander
+        preyDetected = false;
+        inAttackRange = false;
     }
     void Sleep()
     {
-        if (timer == 2.0f)
+        if(timer >= 2.0f)
         {
             fatigue -= 2.5f;
         }
-
-        if (fatigue <= 50)
+        
+        if(fatigue <= 50)
         {
-            if (thirst >= 80)
+            if(thirst >= 80)
             {
                 ChangeState(States.Search);
             }
-            else if (hunger >= 80)
+            else if(hunger >= 80)
             {
                 ChangeState(States.Search);
             }
         }
-        else if (fatigue <= 0)
+        else if(fatigue <= 0)
         {
             fatigue = 0;
             ChangeState(States.Wander);
@@ -117,33 +127,50 @@ public class AlphaDeerScript : MonoBehaviour
     }
     void Search()
     {
-        // TODO search for water
-        // TODO implement stopping search when water is reached
-        // TODO implement flee if predator gets too close
+        if(hunger > thirst)
+        {
+            if(foodLeft != 0)
+            {
+                ChangeState(States.Eat);
+            }
+            else
+            {
+                // TODO search for food, switch to sneak when prey is located
+            }
+        }
+        else
+        {
+            // TODO search for water
+            // TODO implement stopping search when water is reached
+        }
     }
     void Drink()
     {
-        if (timer == 2.0f)
+        if(timer >= 2.0f)
         {
             thirst -= 6.0f;
         }
 
-        // TODO implement flee if predator gets too close
-        // else
-        if (thirst <= 0)
+        if(thirst <= 40)
+        {
+            if(hunger >= 80)
+            {
+                ChangeState(States.Search);
+            }
+        }
+        else if (thirst <= 0)
         {
             ChangeState(States.Wander);
         }
     }
     void Eat()
     {
-        if (timer == 2.0f)
+        if (timer >= 2.0f)
         {
+            foodLeft--;
             hunger -= 6.0f;
         }
 
-        // TODO implement flee if predator gets too close
-        // else
         if (hunger <= 40)
         {
             if (thirst >= 80)
@@ -156,11 +183,22 @@ public class AlphaDeerScript : MonoBehaviour
             ChangeState(States.Wander);
         }
     }
+    void Sneak()
+    {
+        // TODO move towards prey
+        // TODO when close enough, chase
+    }
+    void Chase()
+    {
+        // TODO attack
+        // TODO chase after prey
+        // TODO if prey exits area of perception, search again
+        // TODO add attack, and add 50 to foodLeft if prey is killed
+    }
     void Wander()
     {
-        // TODO wander
-        // TODO implement flee if predator gets too close
-        // else
+        // TODO add wander
+
         if (fatigue >= 50)
         {
             ChangeState(States.Sleep);
@@ -175,14 +213,49 @@ public class AlphaDeerScript : MonoBehaviour
         }
     }
 
+    //void Seek()     // what happens while seeking
+    //{
+    //    timer += Time.deltaTime;
+
+    //    if (timer >= waitInterval)
+    //    {
+    //        randomTarget = (Random.insideUnitSphere * seekDistance) + intruderTransform.position;
+    //        timer = 0.0f;
+    //    }
+    //    randomTarget.y = 0;
+
+    //    Vector3 offset = randomTarget - transform.position;
+
+    //    cougarAgent.velocity = offset.normalized * speed;
+    //    cougarAgent.UpdateMovement();
+
+
+    //    if (inAttackRange)
+    //    {
+    //        ChangeState(States.Attack);
+    //    }
+    //    else if (!intruderDetected)
+    //    {
+    //        ChangeState(States.Patrol);
+    //    }
+    //}
+    //void Attack()   // what happens while attacking
+    //{
+    //    Vector3 offset = intruderTransform.position - transform.position;
+
+    //    cougarAgent.velocity = offset.normalized * speed;
+    //    cougarAgent.UpdateMovement();
+
+    //    if (!inAttackRange)
+    //    {
+    //        ChangeState(States.Seek);
+    //    }
+    //}
+
     void ChangeState(States newState)
     {
         switch (currentState)
         {
-            case States.Flee:
-                OnFleeExit();
-                OnWanderEnter();
-                break;
             case States.Sleep:
                 OnSleepExit();
                 if(newState == States.Search)
@@ -196,9 +269,13 @@ public class AlphaDeerScript : MonoBehaviour
                 break;
             case States.Search:
                 OnSearchExit();
-                if(newState == States.Flee)
+                if(newState == States.Eat)
                 {
-                    OnFleeEnter();
+                    OnEatEnter();
+                }
+                else if(newState == States.Sneak)
+                {
+                    OnSneakEnter();
                 }
                 else
                 {
@@ -207,13 +284,9 @@ public class AlphaDeerScript : MonoBehaviour
                 break;
             case States.Drink:
                 OnDrinkExit();
-                if (newState == States.Flee)
+                if(newState == States.Search)
                 {
-                    OnFleeEnter();
-                }
-                else if (newState == States.Eat)
-                {
-                    OnEatEnter();
+                    OnSearchEnter();
                 }
                 else
                 {
@@ -222,11 +295,7 @@ public class AlphaDeerScript : MonoBehaviour
                 break;
             case States.Eat:
                 OnEatExit();
-                if (newState == States.Flee)
-                {
-                    OnFleeEnter();
-                }
-                else if(newState == States.Search)
+                if (newState == States.Search)
                 {
                     OnSearchEnter();
                 }
@@ -235,13 +304,13 @@ public class AlphaDeerScript : MonoBehaviour
                     OnWanderEnter();
                 }
                 break;
-            case States.Wander:
-                OnWanderExit();
-                if (newState == States.Flee)
-                {
-                    OnFleeEnter();
-                }
-                else if (newState == States.Search)
+            case States.Sneak:
+                OnSneakExit();
+                OnChaseEnter();
+                break;
+            case States.Chase:
+                OnChaseExit();
+                if (newState == States.Search)
                 {
                     OnSearchEnter();
                 }
@@ -250,18 +319,18 @@ public class AlphaDeerScript : MonoBehaviour
                     OnEatEnter();
                 }
                 break;
+            case States.Wander:
+                OnWanderExit();
+                if(currentState == States.Search)
+                {
+                    OnSearchEnter();
+                }
+                else
+                {
+                    OnSleepEnter();
+                }
+                break;
         }
-    }
-
-    // Flee
-    void OnFleeEnter()
-    {
-        // anything that happens when flee state starts
-        currentState = States.Flee;
-    }
-    void OnFleeExit()
-    {
-        // anything that happens when flee state ends
     }
 
     // Sleep
@@ -306,6 +375,28 @@ public class AlphaDeerScript : MonoBehaviour
     void OnEatExit()
     {
         // anything that happens when eat state ends
+    }
+
+    // Sneak
+    void OnSneakEnter()
+    {
+        // anything that happens when sneak state starts
+        currentState = States.Sneak;
+    }
+    void OnSneakExit()
+    {
+        // anything that happens when sneak state ends
+    }
+
+    // Chase
+    void OnChaseEnter()
+    {
+        // anything that happens when chase state starts
+        currentState = States.Chase;
+    }
+    void OnChaseExit()
+    {
+        // anything that happens when chase state ends
     }
 
     // Wander

@@ -41,8 +41,8 @@ public class DeerScript : MonoBehaviour
 
     private void Update()
     {
-        timer++;
-        if (timer == 2.0f)
+        timer += Time.deltaTime;
+        if (timer >= 2.0f)
         {
             fatigue += 0.5f;
             hunger++;
@@ -96,7 +96,7 @@ public class DeerScript : MonoBehaviour
     }
     void Sleep()
     {
-        if (timer == 2.0f)
+        if (timer >= 2.0f)
         {
             fatigue -= 2.5f;
         }
@@ -126,7 +126,7 @@ public class DeerScript : MonoBehaviour
     }
     void Drink()
     {
-        if (timer == 2.0f)
+        if (timer >= 2.0f)
         {
             thirst -= 6.0f;
         }
@@ -140,7 +140,7 @@ public class DeerScript : MonoBehaviour
     }
     void Eat()
     {
-        if (timer == 2.0f)
+        if (timer >= 2.0f)
         {
             hunger -= 6.0f;
         }
