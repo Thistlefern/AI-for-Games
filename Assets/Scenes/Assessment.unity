@@ -306,7 +306,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 134061847}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 12.6, y: 0.5, z: -99.2}
+  m_LocalPosition: {x: 9.1, y: 0.5, z: -103.17}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -363,14 +363,17 @@ MonoBehaviour:
   perception: 20
   cougarSneak: 0
   cougarIsSneaking: 0
+  waterInRange: 0
   reachedThreshold: 0.5
   timer: 0
   sneakTimer: 0
+  wanderTimer: 0
+  timeSpentWandering: 0
   predatorTransform: {fileID: 1095737153}
   lake: {fileID: 1477423644}
   predatorDetected: 0
   seekDistance: 10
-  currentState: 3
+  currentState: 5
 --- !u!114 &134061855
 MonoBehaviour:
   m_ObjectHideFlags: 0
