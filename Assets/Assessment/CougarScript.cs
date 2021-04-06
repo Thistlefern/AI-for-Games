@@ -11,15 +11,18 @@ public class CougarScript : MonoBehaviour
     public float thirst = 0.0f;
     public float hunger = 40.0f;
     public float perception = 20.0f;
-    public float foodLeft = 0.0f;
-    // TODO maybe add cache of where food is stored?
 
     public float reachedThreshold = 0.5f;
 
     public float timer = 0.0f;
+    public float wanderTimer = 0.0f;
+    public float timeSpentWandering = 3.0f;
 
     public Transform intruderTransform;
     public Transform lake;
+
+    public Vector3 intruderLastLocation;
+    public Vector3 food;
 
     public bool preyDetected = false;
     public bool inAttackRange = false;
@@ -45,21 +48,27 @@ public class CougarScript : MonoBehaviour
 
     private void Update()
     {
-        timer += Time.deltaTime;
-        if(timer >= 2.0f)
+        if (currentState != States.Sneak)
         {
-            fatigue += 0.5f;
-            hunger++;
-            thirst++;
-            timer = 0.0f;
+            speed = 8;
         }
+
+        if(intruderTransform.position == intruderLastLocation && inAttackRange)
+        {
+            food = intruderTransform.position;
+        }
+
+        preyDetected = false;
+        inAttackRange = false;
+
+        timer += Time.deltaTime;
 
         Collider[] attackRadius = Physics.OverlapSphere(transform.position, attackRange);
         Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perception);
 
         foreach (var hitCollider in detectionRadius)
         {
-            if (hitCollider.name != name)
+            if (hitCollider.name == intruderTransform.name)
             {
                 preyDetected = true;
             }
@@ -67,7 +76,7 @@ public class CougarScript : MonoBehaviour
 
         foreach (var hitCollider in attackRadius)
         {
-            if (hitCollider.name != name)
+            if (hitCollider.name == intruderTransform.name)
             {
                 inAttackRange = true;
             }
@@ -98,8 +107,14 @@ public class CougarScript : MonoBehaviour
                 break;
         }
 
-        preyDetected = false;
-        inAttackRange = false;
+        if (timer >= 2.0f)
+        {
+            fatigue += 0.5f;
+            hunger++;
+            thirst++;
+            timer = 0.0f;
+        }
+        intruderLastLocation = intruderTransform.position;
     }
     void Sleep()
     {
@@ -129,19 +144,39 @@ public class CougarScript : MonoBehaviour
     {
         if(hunger > thirst)
         {
-            if(foodLeft != 0)
+            if(food != intruderTransform.position)
             {
-                ChangeState(States.Eat);
+                Vector3 offset = intruderTransform.position - transform.position;
+                cougarAgent.velocity = offset.normalized * speed;
+                cougarAgent.UpdateMovement();
+
+                if (preyDetected)
+                {
+                    ChangeState(States.Sneak);
+                }
             }
             else
             {
-                // TODO search for food, switch to sneak when prey is located
+                Vector3 offset = food - transform.position;
+                cougarAgent.velocity = offset.normalized * speed;
+                cougarAgent.UpdateMovement();
+
+                if (offset.magnitude <= reachedThreshold)
+                {
+                    ChangeState(States.Eat);
+                }
             }
         }
         else
         {
-            // TODO search for water
-            // TODO implement stopping search when water is reached
+            Vector3 offset = lake.position - transform.position;
+            cougarAgent.velocity = offset.normalized * speed;
+            cougarAgent.UpdateMovement();
+
+            if (offset.magnitude <= reachedThreshold)
+            {
+                ChangeState(States.Drink);
+            }
         }
     }
     void Drink()
@@ -167,7 +202,6 @@ public class CougarScript : MonoBehaviour
     {
         if (timer >= 2.0f)
         {
-            foodLeft--;
             hunger -= 6.0f;
         }
 
@@ -185,19 +219,51 @@ public class CougarScript : MonoBehaviour
     }
     void Sneak()
     {
-        // TODO move towards prey
-        // TODO when close enough, chase
+        speed = 4;
+        Vector3 offset = intruderTransform.position - transform.position;
+        cougarAgent.velocity = offset.normalized * speed;
+        cougarAgent.UpdateMovement();
+
+        if(food == intruderTransform.position)
+        {
+            ChangeState(States.Eat);
+        }
+        else if(transform.position.x - intruderTransform.position.x > 5 || transform.position.y - intruderTransform.position.y > 5)
+        {
+            ChangeState(States.Chase);
+        }
     }
+
     void Chase()
     {
-        // TODO attack
-        // TODO chase after prey
-        // TODO if prey exits area of perception, search again
-        // TODO add attack, and add 50 to foodLeft if prey is killed
+        Vector3 offset = intruderTransform.position - transform.position;
+        cougarAgent.velocity = offset.normalized * speed;
+        cougarAgent.UpdateMovement();
+
+        if (food == intruderTransform.position)
+        {
+            ChangeState(States.Eat);
+        }
+        else if (!preyDetected)
+        {
+            ChangeState(States.Search);
+        }
     }
     void Wander()
     {
-        // TODO add wander
+        wanderTimer += Time.deltaTime;
+
+        if (wanderTimer > timeSpentWandering)
+        {
+            randomTarget = (Random.insideUnitSphere * seekDistance) + transform.position;
+            wanderTimer = 0.0f;
+        }
+        randomTarget.y = 0;
+
+        Vector3 offset = randomTarget - transform.position;
+
+        cougarAgent.velocity = offset.normalized * speed;
+        cougarAgent.UpdateMovement();
 
         if (fatigue >= 50)
         {
@@ -212,45 +278,6 @@ public class CougarScript : MonoBehaviour
             ChangeState(States.Search);
         }
     }
-
-    //void Seek()     // what happens while seeking
-    //{
-    //    timer += Time.deltaTime;
-
-    //    if (timer >= waitInterval)
-    //    {
-    //        randomTarget = (Random.insideUnitSphere * seekDistance) + intruderTransform.position;
-    //        timer = 0.0f;
-    //    }
-    //    randomTarget.y = 0;
-
-    //    Vector3 offset = randomTarget - transform.position;
-
-    //    cougarAgent.velocity = offset.normalized * speed;
-    //    cougarAgent.UpdateMovement();
-
-
-    //    if (inAttackRange)
-    //    {
-    //        ChangeState(States.Attack);
-    //    }
-    //    else if (!intruderDetected)
-    //    {
-    //        ChangeState(States.Patrol);
-    //    }
-    //}
-    //void Attack()   // what happens while attacking
-    //{
-    //    Vector3 offset = intruderTransform.position - transform.position;
-
-    //    cougarAgent.velocity = offset.normalized * speed;
-    //    cougarAgent.UpdateMovement();
-
-    //    if (!inAttackRange)
-    //    {
-    //        ChangeState(States.Seek);
-    //    }
-    //}
 
     void ChangeState(States newState)
     {
@@ -310,7 +337,7 @@ public class CougarScript : MonoBehaviour
                 break;
             case States.Chase:
                 OnChaseExit();
-                if (newState == States.Search)
+                if(food != intruderTransform.position)
                 {
                     OnSearchEnter();
                 }
@@ -321,7 +348,7 @@ public class CougarScript : MonoBehaviour
                 break;
             case States.Wander:
                 OnWanderExit();
-                if(currentState == States.Search)
+                if(newState == States.Search)
                 {
                     OnSearchEnter();
                 }
@@ -391,12 +418,11 @@ public class CougarScript : MonoBehaviour
     // Chase
     void OnChaseEnter()
     {
-        // anything that happens when chase state starts
         currentState = States.Chase;
     }
     void OnChaseExit()
     {
-        // anything that happens when chase state ends
+
     }
 
     // Wander

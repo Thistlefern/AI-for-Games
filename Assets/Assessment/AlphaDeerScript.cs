@@ -5,7 +5,7 @@ using UnityEngine;
 public class AlphaDeerScript : MonoBehaviour
 {
     public Agent alphaAgent;
-    public float speed = 8.0f;
+    public float speed = 10.0f;
     public float health = 40.0f;
     public float fatigue = 0.0f;
     public float thirst = 0.0f;
@@ -15,27 +15,33 @@ public class AlphaDeerScript : MonoBehaviour
     public bool cougarIsSneaking;
     public bool waterInRange;
 
-    public float reachedThreshold = 0.5f;
+    public float reachedThreshold = 5.0f;
 
     public float timer = 0.0f;
     public float sneakTimer = 0.0f;
     [SerializeField]
     public float wanderTimer = 0.0f;
     public float timeSpentWandering = 3.0f;
+    public float fleeTimer = 0.0f;
+    public float timeSpentFleeing = 3.0f;
+    public float timeSinceAttacked = 0.0f;
+
 
     public Transform predatorTransform;
     public Transform lake;
 
     public bool predatorDetected = false;
+    public bool threatDetected = false;
 
     public float seekDistance = 10.0f;
+    public float dangerZone = 4.0f;
 
     [SerializeField]
     static Vector3 randomTarget;
 
     public enum States
     {
-        Flee, Sleep, Search, Drink, Eat, Wander
+        Flee, Sleep, Search, Drink, Eat, Dead, Wander
     }
 
     [SerializeField]
@@ -53,16 +59,18 @@ public class AlphaDeerScript : MonoBehaviour
 
     private void Update()
     {
-        timer += Time.deltaTime;
-        if (timer >= 2.0f)
+        if(health <= 0)
         {
-            fatigue += 0.5f;
-            hunger++;
-            thirst++;
-            timer = 0.0f;
+            ChangeState(States.Dead);
         }
 
+        if(currentState != States.Dead)
+        {
+            timer += Time.deltaTime;
+        }
+       
         Collider[] detectionRadius = Physics.OverlapSphere(transform.position, perception);
+        Collider[] attackedRadius = Physics.OverlapSphere(transform.position, dangerZone);
 
         predatorDetected = false;
         waterInRange = false;
@@ -71,7 +79,7 @@ public class AlphaDeerScript : MonoBehaviour
         {
             foreach (var hitCollider in detectionRadius)
             {
-                if (hitCollider == predatorTransform)
+                if (hitCollider.name == predatorTransform.name)
                 {
                     predatorDetected = true;
                 }
@@ -82,13 +90,32 @@ public class AlphaDeerScript : MonoBehaviour
         {
             sneakTimer = 0.0f;
             System.Random sneakScore = new System.Random();
-            cougarSneak = sneakScore.Next(10);
+            cougarSneak = sneakScore.Next(8);
             cougarIsSneaking = true;
         }
 
         if (cougarIsSneaking)
         {
             sneakTimer += Time.deltaTime;
+        }
+
+        foreach (var hitCollider in attackedRadius)
+        {
+            if (hitCollider.name == predatorTransform.name && threatDetected == false)
+            {
+                health -= 10;
+                threatDetected = true;
+            }
+        }
+
+        if (threatDetected)
+        {
+            timeSinceAttacked += Time.deltaTime;
+            if(timeSinceAttacked >= 3)
+            {
+                timeSinceAttacked = 0;
+                threatDetected = false;
+            }
         }
 
         switch (currentState)
@@ -108,9 +135,19 @@ public class AlphaDeerScript : MonoBehaviour
             case States.Eat:
                 Eat();
                 break;
+            case States.Dead:
+                Dead();
+                break;
             default:
                 Wander();
                 break;
+        }
+        if (timer >= 2.0f)
+        {
+            fatigue += 0.5f;
+            hunger++;
+            thirst++;
+            timer = 0.0f;
         }
     }
     
@@ -123,7 +160,14 @@ public class AlphaDeerScript : MonoBehaviour
 
         if (!predatorDetected)
         {
-            ChangeState(States.Wander);
+            fleeTimer += Time.deltaTime;
+            if(fleeTimer >= timeSpentFleeing)
+            {
+                threatDetected = false;
+                sneakTimer = 0;
+                fleeTimer = 0;
+                ChangeState(States.Wander);
+            }
         }
     }
     void Sleep()
@@ -152,15 +196,22 @@ public class AlphaDeerScript : MonoBehaviour
     }
     void Search()
     {
-        // TODO search for water
+        Vector3 offset = lake.position - transform.position;
+        alphaAgent.velocity = offset.normalized * speed;
+        alphaAgent.UpdateMovement();
 
-        if (sneakTimer >= cougarSneak)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
+        if (sneakTimer > cougarSneak || threatDetected == true)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
         {
             cougarIsSneaking = false;
             ChangeState(States.Flee);
         }
-        // else
-        // TODO implement stopping search when water is reached
+        else
+        {
+            if (offset.magnitude <= reachedThreshold)
+            {
+                ChangeState(States.Drink);
+            }
+        }
     }
     void Drink()
     {
@@ -169,7 +220,7 @@ public class AlphaDeerScript : MonoBehaviour
             thirst -= 6.0f;
         }
 
-        if (sneakTimer >= cougarSneak)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
+        if (sneakTimer > cougarSneak || threatDetected == true)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
         {
             cougarIsSneaking = false;
             ChangeState(States.Flee);
@@ -186,28 +237,27 @@ public class AlphaDeerScript : MonoBehaviour
             hunger -= 6.0f;
         }
 
-        if (sneakTimer >= cougarSneak)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
+        if (sneakTimer > cougarSneak || threatDetected == true)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
         {
             cougarIsSneaking = false;
             ChangeState(States.Flee);
-        }
-        else if (hunger <= 40)
-        {
-            if (thirst >= 80)
-            {
-                ChangeState(States.Search);
-            }
         }
         else if (hunger <= 0)
         {
             ChangeState(States.Wander);
         }
     }
+
+    void Dead()
+    {
+
+    }
+
     void Wander()
     {
         wanderTimer += Time.deltaTime;
 
-        if (wanderTimer >= timeSpentWandering)
+        if (wanderTimer > timeSpentWandering)
         {
             randomTarget = (Random.insideUnitSphere * seekDistance) + transform.position;
             wanderTimer = 0.0f;
@@ -219,7 +269,7 @@ public class AlphaDeerScript : MonoBehaviour
         alphaAgent.velocity = offset.normalized * speed;
         alphaAgent.UpdateMovement();
 
-        if (sneakTimer > cougarSneak)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
+        if (sneakTimer > cougarSneak || threatDetected == true)  // the cougar gets a few seconds (random 0-10) to sneak up before it is noticed
         {
             cougarIsSneaking = false;
             ChangeState(States.Flee);
@@ -234,7 +284,7 @@ public class AlphaDeerScript : MonoBehaviour
         }
         else if (hunger >= 50)
         {
-            ChangeState(States.Search);
+            ChangeState(States.Eat);
         }
     }
 
@@ -244,7 +294,14 @@ public class AlphaDeerScript : MonoBehaviour
         {
             case States.Flee:
                 OnFleeExit();
-                OnWanderEnter();
+                if(newState == States.Dead)
+                {
+                    OnDeadEnter();
+                }
+                else
+                {
+                    OnWanderEnter();
+                }
                 break;
             case States.Sleep:
                 OnSleepExit();
@@ -374,6 +431,13 @@ public class AlphaDeerScript : MonoBehaviour
     {
         // anything that happens when eat state ends
     }
+
+    // Dead
+    void OnDeadEnter()
+    {
+        currentState = States.Dead;
+    }
+
 
     // Wander
     void OnWanderEnter()
